@@ -23,6 +23,7 @@ export interface Restaurant {
   logo: string;
   menu: MenuItem[];
   vendorId: string;
+  location: string;
 }
 
 export interface CartItem extends MenuItem {
@@ -46,6 +47,7 @@ export interface User {
   role: Role;
   restaurantId?: string;
   password?: string; // Only for admin view
+  isActive?: boolean;
 }
 
 export interface SalesData {

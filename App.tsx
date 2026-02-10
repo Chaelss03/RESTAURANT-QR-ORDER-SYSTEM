@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Role, Restaurant, Order, OrderStatus, CartItem } from './types';
 import { MOCK_RESTAURANTS, INITIAL_USERS } from './constants';
 import CustomerView from './pages/CustomerView';
@@ -7,15 +7,30 @@ import VendorView from './pages/VendorView';
 import AdminView from './pages/AdminView';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import { LogOut } from 'lucide-react';
+import { LogOut, Sun, Moon } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentRole, setCurrentRole] = useState<Role | null>(null);
   const [restaurants, setRestaurants] = useState<Restaurant[]>(MOCK_RESTAURANTS);
+  const [allUsers, setAllUsers] = useState<User[]>(INITIAL_USERS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [view, setView] = useState<'LANDING' | 'LOGIN' | 'APP'>('LANDING');
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    return localStorage.getItem('theme') === 'dark' || 
+      (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
 
   const handleLogin = (user: User) => {
     setCurrentUser(user);
@@ -81,8 +96,18 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleAddVendor = (newUser: User, newRestaurant: Restaurant) => {
+    setAllUsers(prev => [...prev, { ...newUser, isActive: true }]);
+    setRestaurants(prev => [...prev, newRestaurant]);
+  };
+
+  const handleUpdateVendor = (updatedUser: User, updatedRestaurant: Restaurant) => {
+    setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    setRestaurants(prev => prev.map(r => r.id === updatedRestaurant.id ? updatedRestaurant : r));
+  };
+
   if (view === 'LANDING') {
-    return <LandingPage onScan={() => { setCurrentRole('CUSTOMER'); setView('APP'); }} onLoginClick={() => setView('LOGIN')} />;
+    return <LandingPage onScan={() => { setCurrentRole('CUSTOMER'); setView('APP'); }} onLoginClick={() => setView('LOGIN')} isDarkMode={isDarkMode} onToggleDarkMode={() => setIsDarkMode(!isDarkMode)} />;
   }
 
   if (view === 'LOGIN') {
@@ -90,27 +115,36 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Universal Header */}
-      <header className="sticky top-0 z-50 bg-white border-b shadow-sm h-16 flex items-center justify-between px-4 lg:px-8">
+      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 border-b dark:border-gray-700 shadow-sm h-16 flex items-center justify-between px-4 lg:px-8">
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('LANDING')}>
           <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold">Q</div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight">QuickServe</h1>
+          <h1 className="text-xl font-bold text-gray-800 dark:text-white tracking-tight">QuickServe</h1>
         </div>
 
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title="Toggle Dark Mode"
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+
           {currentRole === 'CUSTOMER' && (
-            <button onClick={() => setView('LANDING')} className="text-sm font-medium text-gray-500 hover:text-orange-500">Back to QR</button>
+            <button onClick={() => setView('LANDING')} className="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-orange-500 dark:hover:text-orange-400">Back to QR</button>
           )}
+          
           {currentUser ? (
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
                 <p className="text-xs text-gray-400 capitalize">{currentUser.role}</p>
-                <p className="text-sm font-semibold">{currentUser.username}</p>
+                <p className="text-sm font-semibold dark:text-white">{currentUser.username}</p>
               </div>
               <button 
                 onClick={handleLogout}
-                className="p-2 rounded-full hover:bg-gray-100 text-gray-600 transition-colors"
+                className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-colors"
               >
                 <LogOut size={20} />
               </button>
@@ -119,7 +153,7 @@ const App: React.FC = () => {
             currentRole !== 'CUSTOMER' && (
               <button 
                 onClick={() => setView('LOGIN')} 
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-all"
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-all shadow-md shadow-orange-200 dark:shadow-none"
               >
                 Login
               </button>
@@ -151,9 +185,11 @@ const App: React.FC = () => {
 
         {currentRole === 'ADMIN' && (
           <AdminView 
-            vendors={INITIAL_USERS.filter(u => u.role === 'VENDOR')}
+            vendors={allUsers.filter(u => u.role === 'VENDOR')}
             restaurants={restaurants}
             orders={orders}
+            onAddVendor={handleAddVendor}
+            onUpdateVendor={handleUpdateVendor}
           />
         )}
       </main>
