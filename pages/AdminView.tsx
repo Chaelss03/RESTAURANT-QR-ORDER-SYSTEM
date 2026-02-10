@@ -1,27 +1,36 @@
 
 import React, { useState, useMemo } from 'react';
 import { User, Restaurant, Order } from '../types';
-import { Users, Store, TrendingUp, Settings, MoreHorizontal, ShieldCheck, Mail, Key, Search, Filter, X, Plus, MapPin, Power, Edit3, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Users, Store, TrendingUp, Settings, MoreHorizontal, ShieldCheck, Mail, Key, Search, Filter, X, Plus, MapPin, Power, Edit3, CheckCircle2, AlertCircle, LogIn, Trash2, LayoutGrid, List, ChevronRight, Eye } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface Props {
   vendors: User[];
   restaurants: Restaurant[];
   orders: Order[];
+  locations: string[];
   onAddVendor: (user: User, restaurant: Restaurant) => void;
   onUpdateVendor: (user: User, restaurant: Restaurant) => void;
+  onImpersonateVendor: (user: User) => void;
+  onAddLocation: (loc: string) => void;
+  onDeleteLocation: (loc: string) => void;
 }
 
 const COLORS = ['#f97316', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
-const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor, onUpdateVendor }) => {
-  const [activeTab, setActiveTab] = useState<'VENDORS' | 'REPORTS'>('VENDORS');
+const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, locations, onAddVendor, onUpdateVendor, onImpersonateVendor, onAddLocation, onDeleteLocation }) => {
+  const [activeTab, setActiveTab] = useState<'VENDORS' | 'LOCATIONS' | 'REPORTS'>('VENDORS');
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState('All Locations');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [newLocationInput, setNewLocationInput] = useState('');
   
+  // Location View Options
+  const [locationViewMode, setLocationViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewingLocationVendors, setViewingLocationVendors] = useState<string | null>(null);
+
   // Registration Form State
   const [newVendor, setNewVendor] = useState({
     username: '',
@@ -32,15 +41,6 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
 
   // Edit Form State
   const [editVendor, setEditVendor] = useState<{user: User, restaurant: Restaurant} | null>(null);
-
-  const [newLocationInput, setNewLocationInput] = useState('');
-  const [isAddingLocation, setIsAddingLocation] = useState(false);
-
-  // Derive unique locations from restaurants
-  const locations = useMemo(() => {
-    const locs = Array.from(new Set(restaurants.map(r => r.location)));
-    return ['All Locations', ...locs];
-  }, [restaurants]);
 
   const filteredVendors = useMemo(() => {
     return vendors.filter(vendor => {
@@ -120,6 +120,18 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
     }
   };
 
+  const handleRegisterLocation = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newLocationInput.trim()) {
+      onAddLocation(newLocationInput.trim());
+      setNewLocationInput('');
+    }
+  };
+
+  const getVendorsInLocation = (locName: string) => {
+    return restaurants.filter(r => r.location === locName);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 dark:bg-gray-900 transition-colors">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
@@ -127,17 +139,24 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
           <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">System Admin</h1>
           <p className="text-gray-500 dark:text-gray-400 font-medium">Platform overview and vendor management</p>
         </div>
-        <div className="flex bg-white dark:bg-gray-800 rounded-2xl p-1.5 border dark:border-gray-700 shadow-sm transition-colors">
+        <div className="flex bg-white dark:bg-gray-800 rounded-2xl p-1.5 border dark:border-gray-700 shadow-sm transition-colors overflow-x-auto hide-scrollbar">
           <button 
             onClick={() => setActiveTab('VENDORS')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'VENDORS' ? 'bg-orange-500 text-white shadow-lg shadow-orange-100 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'VENDORS' ? 'bg-orange-500 text-white shadow-lg shadow-orange-100 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
           >
             <Store size={18} />
             Vendors
           </button>
           <button 
+            onClick={() => setActiveTab('LOCATIONS')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'LOCATIONS' ? 'bg-orange-500 text-white shadow-lg shadow-orange-100 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+          >
+            <MapPin size={18} />
+            Locations
+          </button>
+          <button 
             onClick={() => setActiveTab('REPORTS')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${activeTab === 'REPORTS' ? 'bg-orange-500 text-white shadow-lg shadow-orange-100 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'REPORTS' ? 'bg-orange-500 text-white shadow-lg shadow-orange-100 dark:shadow-none' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
           >
             <TrendingUp size={18} />
             Global Stats
@@ -159,13 +178,12 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
         ))}
       </div>
 
-      {activeTab === 'VENDORS' ? (
+      {activeTab === 'VENDORS' && (
         <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
           <div className="px-8 py-6 border-b dark:border-gray-700 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gray-50/50 dark:bg-gray-700/50">
             <h3 className="font-black text-lg dark:text-white whitespace-nowrap">Vendor Directory</h3>
             
             <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 flex-1 max-w-5xl">
-              {/* Search Bar */}
               <div className="relative flex-1">
                 <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input 
@@ -177,7 +195,6 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
                 />
               </div>
 
-              {/* Location Filter */}
               <div className="relative">
                 <Filter size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <select 
@@ -185,13 +202,13 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
                   value={locationFilter}
                   onChange={(e) => setLocationFilter(e.target.value)}
                 >
+                  <option value="All Locations">All Locations</option>
                   {locations.map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
               </div>
 
-              {/* Status Filter */}
               <div className="relative">
                 <ShieldCheck size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <select 
@@ -269,13 +286,22 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
                           )}
                         </td>
                         <td className="px-8 py-5 text-right">
-                          <button 
-                            onClick={() => openEditModal(vendor)}
-                            className="p-2 text-gray-400 dark:text-gray-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-500 rounded-lg transition-all"
-                            title="Edit / Actions"
-                          >
-                            <Settings size={18} />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => onImpersonateVendor(vendor)}
+                              className="p-2 text-gray-400 dark:text-gray-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-500 rounded-lg transition-all"
+                              title="Login as Vendor"
+                            >
+                              <LogIn size={18} />
+                            </button>
+                            <button 
+                              onClick={() => openEditModal(vendor)}
+                              className="p-2 text-gray-400 dark:text-gray-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-500 rounded-lg transition-all"
+                              title="Settings"
+                            >
+                              <Settings size={18} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -285,7 +311,149 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
             </table>
           </div>
         </div>
-      ) : (
+      )}
+
+      {activeTab === 'LOCATIONS' && (
+        <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+          <div className="px-8 py-6 border-b dark:border-gray-700 flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-gray-50/50 dark:bg-gray-700/50">
+            <div className="flex flex-col">
+              <h3 className="font-black text-lg dark:text-white whitespace-nowrap">Location Registry</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Physical Zones Manager</p>
+            </div>
+            
+            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 flex-1 max-w-5xl">
+              <form onSubmit={handleRegisterLocation} className="flex-1 flex gap-2">
+                <div className="relative flex-1">
+                  <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input 
+                    type="text" 
+                    placeholder="Register new area (e.g. Floor 3 - Zone B)" 
+                    className="w-full pl-11 pr-4 py-2.5 bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-xl text-sm focus:ring-2 focus:ring-orange-500 outline-none transition-all dark:text-white"
+                    value={newLocationInput}
+                    onChange={(e) => setNewLocationInput(e.target.value)}
+                  />
+                </div>
+                <button 
+                  type="submit"
+                  className="px-6 py-2.5 bg-black dark:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-bold hover:bg-gray-800 dark:hover:bg-white transition-all shadow-md whitespace-nowrap"
+                >
+                  Register Area
+                </button>
+              </form>
+
+              <div className="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 rounded-xl border dark:border-gray-700 shadow-sm">
+                <button 
+                  onClick={() => setLocationViewMode('grid')}
+                  className={`p-1.5 rounded-lg transition-all ${locationViewMode === 'grid' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  <LayoutGrid size={18} />
+                </button>
+                <button 
+                  onClick={() => setLocationViewMode('list')}
+                  className={`p-1.5 rounded-lg transition-all ${locationViewMode === 'list' ? 'bg-orange-500 text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                >
+                  <List size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8">
+            {locationViewMode === 'grid' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {locations.map(loc => {
+                  const locationVendors = getVendorsInLocation(loc);
+                  return (
+                    <div key={loc} className="bg-gray-50 dark:bg-gray-700/30 rounded-3xl border dark:border-gray-600 p-6 flex flex-col transition-all hover:border-orange-200 dark:hover:border-orange-800 group">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="w-12 h-12 bg-white dark:bg-gray-800 text-orange-500 rounded-2xl flex items-center justify-center shadow-sm">
+                          <MapPin size={24} />
+                        </div>
+                        <button 
+                          onClick={() => onDeleteLocation(loc)}
+                          className="p-2 text-gray-300 hover:text-red-500 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={20} />
+                        </button>
+                      </div>
+                      <h4 className="font-black text-xl text-gray-900 dark:text-white mb-2">{loc}</h4>
+                      <div className="flex-1 flex items-end justify-between mt-4 pt-4 border-t dark:border-gray-700">
+                        <button 
+                          onClick={() => setViewingLocationVendors(loc)}
+                          className="text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-orange-500 transition-colors flex items-center gap-1.5"
+                        >
+                          <Store size={14} />
+                          {locationVendors.length} Registered
+                        </button>
+                        <button 
+                          onClick={() => setViewingLocationVendors(loc)}
+                          className="p-1.5 bg-white dark:bg-gray-800 rounded-lg text-gray-400 hover:text-orange-500 transition-colors shadow-sm"
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="border dark:border-gray-700 rounded-3xl overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-400 text-xs font-black uppercase tracking-widest">
+                    <tr>
+                      <th className="px-8 py-4 text-left">Location Name</th>
+                      <th className="px-8 py-4 text-left">Vendor Density</th>
+                      <th className="px-8 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y dark:divide-gray-700">
+                    {locations.map(loc => {
+                      const locationVendors = getVendorsInLocation(loc);
+                      return (
+                        <tr key={loc} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                          <td className="px-8 py-4">
+                            <div className="flex items-center gap-3">
+                              <MapPin size={18} className="text-orange-500" />
+                              <span className="font-bold text-gray-900 dark:text-white">{loc}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-4">
+                            <button 
+                              onClick={() => setViewingLocationVendors(loc)}
+                              className="px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-xl text-xs font-black hover:bg-orange-500 hover:text-white transition-all flex items-center gap-2"
+                            >
+                              <Store size={14} />
+                              {locationVendors.length} Active Vendors
+                            </button>
+                          </td>
+                          <td className="px-8 py-4 text-right">
+                            <div className="flex justify-end items-center gap-2">
+                              <button 
+                                onClick={() => setViewingLocationVendors(loc)}
+                                className="p-2.5 text-gray-400 hover:text-orange-500 transition-colors"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              <button 
+                                onClick={() => onDeleteLocation(loc)}
+                                className="p-2.5 text-gray-300 hover:text-red-500 transition-colors"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'REPORTS' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white dark:bg-gray-800 p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors">
             <h3 className="font-black text-lg mb-8 dark:text-white">Revenue Distribution</h3>
@@ -327,6 +495,62 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
         </div>
       )}
 
+      {/* Location Vendor Details Modal */}
+      {viewingLocationVendors && (
+        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-8 shadow-2xl relative animate-in fade-in zoom-in duration-300">
+            <button 
+              onClick={() => setViewingLocationVendors(null)} 
+              className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400"
+            >
+              <X size={20} />
+            </button>
+
+            <h2 className="text-2xl font-black mb-1 dark:text-white">Vendors in {viewingLocationVendors}</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">List of active stores operating in this zone.</p>
+
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+              {getVendorsInLocation(viewingLocationVendors).length === 0 ? (
+                <p className="text-center py-8 text-gray-500 italic">No vendors registered for this location yet.</p>
+              ) : (
+                getVendorsInLocation(viewingLocationVendors).map(res => {
+                  const vendorUser = vendors.find(v => v.restaurantId === res.id);
+                  return (
+                    <div key={res.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-2xl border dark:border-gray-600 transition-all hover:border-orange-200">
+                      <img src={res.logo} className="w-14 h-14 rounded-2xl object-cover shadow-sm border border-white dark:border-gray-600" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 dark:text-white truncate">{res.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${vendorUser?.isActive ? 'bg-green-100 text-green-600 dark:bg-green-900/20' : 'bg-red-100 text-red-600 dark:bg-green-900/20'}`}>
+                            {vendorUser?.isActive ? 'Active' : 'Offline'}
+                          </span>
+                          <span className="text-xs text-gray-400 truncate">• {vendorUser?.username}</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (vendorUser) onImpersonateVendor(vendorUser);
+                        }}
+                        className="p-3 bg-white dark:bg-gray-800 text-gray-400 hover:text-orange-500 rounded-xl shadow-sm transition-all"
+                      >
+                        <LogIn size={18} />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            
+            <button 
+              onClick={() => setViewingLocationVendors(null)}
+              className="w-full mt-8 py-4 bg-gray-100 dark:bg-gray-700 rounded-2xl font-bold text-gray-600 dark:text-gray-300 transition-colors"
+            >
+              Close Details
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Register Vendor Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -356,19 +580,17 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
                 </div>
                 <div className="col-span-2 md:col-span-1">
                   <label className="block text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-1.5 ml-1">Location</label>
-                  <div className="flex gap-2">
-                    <select 
-                      required 
-                      className="flex-1 px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 dark:text-white font-medium outline-none appearance-none cursor-pointer text-sm"
-                      value={newVendor.location}
-                      onChange={(e) => setNewVendor({...newVendor, location: e.target.value})}
-                    >
-                      <option value="">Select Location</option>
-                      {locations.filter(l => l !== 'All Locations').map(loc => (
-                        <option key={loc} value={loc}>{loc}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <select 
+                    required 
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-none rounded-2xl focus:ring-2 focus:ring-orange-500 dark:text-white font-medium outline-none appearance-none cursor-pointer text-sm"
+                    value={newVendor.location}
+                    onChange={(e) => setNewVendor({...newVendor, location: e.target.value})}
+                  >
+                    <option value="">Select Location</option>
+                    {locations.map(loc => (
+                      <option key={loc} value={loc}>{loc}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -416,7 +638,19 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
               <X size={20} />
             </button>
 
-            <h2 className="text-2xl font-black mb-2 dark:text-white">Edit Vendor</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-black dark:text-white">Edit Vendor</h2>
+              <button 
+                onClick={() => {
+                  onImpersonateVendor(editVendor.user);
+                  setIsEditModalOpen(false);
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-xl text-sm font-bold hover:bg-orange-500 hover:text-white transition-all"
+              >
+                <LogIn size={16} />
+                Login as Vendor
+              </button>
+            </div>
             <p className="text-gray-500 dark:text-gray-400 text-sm mb-8">Modify store settings or deactivate access.</p>
 
             <form onSubmit={handleUpdate} className="space-y-5">
@@ -439,7 +673,7 @@ const AdminView: React.FC<Props> = ({ vendors, restaurants, orders, onAddVendor,
                     value={editVendor.restaurant.location}
                     onChange={(e) => setEditVendor({...editVendor, restaurant: {...editVendor.restaurant, location: e.target.value}})}
                   >
-                    {locations.filter(l => l !== 'All Locations').map(loc => (
+                    {locations.map(loc => (
                       <option key={loc} value={loc}>{loc}</option>
                     ))}
                   </select>

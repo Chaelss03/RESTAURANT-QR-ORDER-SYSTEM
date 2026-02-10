@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User, Role, Restaurant, Order, OrderStatus, CartItem } from './types';
+import { User, Role, Restaurant, Order, OrderStatus, CartItem, MenuItem } from './types';
 import { MOCK_RESTAURANTS, INITIAL_USERS } from './constants';
 import CustomerView from './pages/CustomerView';
 import VendorView from './pages/VendorView';
@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [allUsers, setAllUsers] = useState<User[]>(INITIAL_USERS);
   const [orders, setOrders] = useState<Order[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [locations, setLocations] = useState<string[]>(['Floor 1 - Zone A', 'Floor 2 - Zone B', 'Floor 1 - Zone C', 'Food Court - West']);
   const [view, setView] = useState<'LANDING' | 'LOGIN' | 'APP'>('LANDING');
   const [isDarkMode, setIsDarkMode] = useState(() => {
     return localStorage.getItem('theme') === 'dark' || 
@@ -42,6 +43,11 @@ const App: React.FC = () => {
     setCurrentUser(null);
     setCurrentRole(null);
     setView('LANDING');
+  };
+
+  const handleImpersonateVendor = (user: User) => {
+    setCurrentUser(user);
+    setCurrentRole('VENDOR');
   };
 
   const addToCart = (item: CartItem) => {
@@ -84,12 +90,36 @@ const App: React.FC = () => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o));
   };
 
-  const updateMenuItem = (restaurantId: string, updatedItem: any) => {
+  const updateMenuItem = (restaurantId: string, updatedItem: MenuItem) => {
     setRestaurants(prev => prev.map(r => {
       if (r.id === restaurantId) {
         return {
           ...r,
           menu: r.menu.map(m => m.id === updatedItem.id ? updatedItem : m)
+        };
+      }
+      return r;
+    }));
+  };
+
+  const handleAddMenuItem = (restaurantId: string, newItem: MenuItem) => {
+    setRestaurants(prev => prev.map(r => {
+      if (r.id === restaurantId) {
+        return {
+          ...r,
+          menu: [...r.menu, newItem]
+        };
+      }
+      return r;
+    }));
+  };
+
+  const handlePermanentDeleteMenuItem = (restaurantId: string, itemId: string) => {
+    setRestaurants(prev => prev.map(r => {
+      if (r.id === restaurantId) {
+        return {
+          ...r,
+          menu: r.menu.filter(m => m.id !== itemId)
         };
       }
       return r;
@@ -104,6 +134,16 @@ const App: React.FC = () => {
   const handleUpdateVendor = (updatedUser: User, updatedRestaurant: Restaurant) => {
     setAllUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
     setRestaurants(prev => prev.map(r => r.id === updatedRestaurant.id ? updatedRestaurant : r));
+  };
+
+  const handleAddLocation = (newLoc: string) => {
+    if (!locations.includes(newLoc)) {
+      setLocations(prev => [...prev, newLoc]);
+    }
+  };
+
+  const handleDeleteLocation = (locToDelete: string) => {
+    setLocations(prev => prev.filter(l => l !== locToDelete));
   };
 
   if (view === 'LANDING') {
@@ -165,7 +205,10 @@ const App: React.FC = () => {
       <main className="flex-1">
         {currentRole === 'CUSTOMER' && (
           <CustomerView 
-            restaurants={restaurants} 
+            restaurants={restaurants.map(res => ({
+              ...res,
+              menu: res.menu.filter(m => !m.isArchived)
+            }))} 
             cart={cart}
             orders={orders}
             onAddToCart={addToCart}
@@ -180,6 +223,8 @@ const App: React.FC = () => {
             orders={orders.filter(o => o.restaurantId === currentUser.restaurantId)}
             onUpdateOrder={updateOrderStatus}
             onUpdateMenu={updateMenuItem}
+            onAddMenuItem={handleAddMenuItem}
+            onPermanentDeleteMenuItem={handlePermanentDeleteMenuItem}
           />
         )}
 
@@ -188,8 +233,12 @@ const App: React.FC = () => {
             vendors={allUsers.filter(u => u.role === 'VENDOR')}
             restaurants={restaurants}
             orders={orders}
+            locations={locations}
             onAddVendor={handleAddVendor}
             onUpdateVendor={handleUpdateVendor}
+            onImpersonateVendor={handleImpersonateVendor}
+            onAddLocation={handleAddLocation}
+            onDeleteLocation={handleDeleteLocation}
           />
         )}
       </main>

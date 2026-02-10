@@ -8,6 +8,11 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED'
 }
 
+export interface MenuItemVariant {
+  name: string;
+  price: number;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -15,6 +20,13 @@ export interface MenuItem {
   price: number;
   image: string;
   category: string;
+  isArchived?: boolean; // Added for archiving logic
+  sizes?: MenuItemVariant[];
+  tempOptions?: {
+    hot?: number;
+    cold?: number;
+    enabled: boolean;
+  };
 }
 
 export interface Restaurant {
@@ -29,6 +41,8 @@ export interface Restaurant {
 export interface CartItem extends MenuItem {
   quantity: number;
   restaurantId: string;
+  selectedSize?: string;
+  selectedTemp?: 'Hot' | 'Cold';
 }
 
 export interface Order {
@@ -46,7 +60,7 @@ export interface User {
   username: string;
   role: Role;
   restaurantId?: string;
-  password?: string; // Only for admin view
+  password?: string;
   isActive?: boolean;
 }
 
